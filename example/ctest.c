@@ -4,4 +4,4 @@ int scheme_entry(){
   
 }
 
-/* compile this using "gcc --omit-frame-pointer -S ctest.c"
+// compile this using "gcc --omit-frame-pointer -S ctest.c"

@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
     make \
     nasm \
     libc6-dev-i386 \
+    guile-3.0 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /workspace
