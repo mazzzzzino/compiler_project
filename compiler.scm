@@ -18,7 +18,7 @@
   (emit "    push %edx")
   
   ;our code goes here
-  (emit "    movl $~s, %eax"(immediate-rep x))
+  (compile-expr x )
 
   ;restore state for return to C
 
@@ -69,7 +69,48 @@
 	     (logior ( ash 1 bool-shift ) bool-tag)
 	     bool-tag))
 	))
-  
+
+
+;checks whether it is primitive call or not -> car(primcall + 1 2)returns primcall
+;then using eq? checks if it is or not
+(define (primitive-call? form)
+  (eq? 'primcall (car form)))
+
+;cadr is just car(cdr()) -> car(cdr(primcall + 1 2)) -> car(+ 1 2)-> +  
+(define (primitive-op form) (cadr form ))
+
+;caddr -> car(cdr(cdr())) gives us the first argument
+(define (primitive-op-arg1 form) (caddr form))
+
+;cadddr -> car(cdr(cdr(cdr()))) gives us second argumeent
+(define (primitive-op-arg2 form) (cadddr form))
+
+;cddr -> cdr(cdr()) -> cdr(cdr(primcall + 1 2)) -> cdr(+ 1 2) -> (1 2)
+(define (primitive-op-args form) (cddr form))
+
+
+(define (immediate? x) (or (integer? x) (char? x) (boolean? x) (null? x)))
+
+
+(define (compile-expr e)
+  (cond
+  ((immediate? e) (emit "    movl $~s, %eax" (immediate-rep e)))
+  ((primitive-call? e) (compile-primitive-call e))))
+
+(define (compile-primitive-call form)
+  (case (primitive-op form)
+    ((add1)
+     ;2 operations below first one stores the arg in the register
+     ;then second one just makes the assembly -> addl $~1, %eax 
+     (compile-expr (primitive-op-arg1 form))
+     (emit "    addl $~s, %eax" (immediate-rep 1)))
+    ;similar to add1
+    ((sub1)
+    (compile-expr (primitive-op-arg1 form))
+    (emit "    subl $~s, %eax" (immediate-rep 1)))
+  ))
+
+
 
 ;here calls the compiler-program and redirects the ouput to the /tmp/compiled.s file
 ;then runs the gcc command 
