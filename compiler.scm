@@ -81,7 +81,6 @@
 
 ;caddr -> car(cdr(cdr())) gives us the first argument
 (define (primitive-op-arg1 form) (caddr form))
-
 ;cadddr -> car(cdr(cdr(cdr()))) gives us second argumeent
 (define (primitive-op-arg2 form) (cadddr form))
 
@@ -97,6 +96,16 @@
   ((immediate? e) (emit "    movl $~s, %eax" (immediate-rep e)))
   ((primitive-call? e) (compile-primitive-call e))))
 
+;comparing values for type checking
+(define (emit-is-eax-equal-to val)
+  (emit "cmpl $~s, %eax" val) ;compares val by doing eax - val if 0 se zero flag
+  (emit "movl $0, %eax") ;zeroes out eax
+  (emit "sete %al") ;sets last byte of eax to 1 if zf is set, 0 if not
+  (emit "sall $~s,%eax" bool-shift) ;shifts the bit in eax 
+  (emit "orl $~s, %eax" bool-tag)) ;feeds in the bool-tag pattern 
+;;then the runtime tells us whether it is t ot f
+
+
 (define (compile-primitive-call form)
   (case (primitive-op form)
     ((add1)
@@ -108,8 +117,24 @@
     ((sub1)
     (compile-expr (primitive-op-arg1 form))
     (emit "    subl $~s, %eax" (immediate-rep 1)))
-  ))
-
+    ;check if integer or not
+    ((integer?)
+     (compile-expr (primitive-op-arg1 form))
+     (emit "    andl $~s, %eax" fixnum-mask)
+     (emit-is-eax-equal-to 0)
+     )
+    ;cheack if char or not
+    ((char?)
+     (compile-expr (primitive-op-arg1 form))
+     (emit "    andl $~s, %eax" char-mask)
+     (emit-is-eax-equal-to char-tag)
+     )
+    ;check if boolean or not 
+    ((boolean?)
+     (compile-expr (primitive-op-arg1 form))
+     (emit "    andl $~s, %eax" bool-mask)
+     (emit-is-eax-equal-to bool-tag))
+    ))
 
 
 ;here calls the compiler-program and redirects the ouput to the /tmp/compiled.s file
@@ -125,5 +150,7 @@
 (define (compile-run program)
  ( begin (compile-to-binary program)
   (system "./a.out")))
+
+
 
 
