@@ -18,14 +18,18 @@
   (emit "    push %edx")
   
   ;our code goes here
-  (compile-expr x )
+  (compile-expr x ( - wordsize) )
 
   ;restore state for return to C
 
   (emit "    pop  %esi")
   (emit "    pop  %edi")
   (emit "    pop  %edx")
-  (emit "    ret"))
+  (emit "    ret")) 
+
+;natural amount of data cpu processes at once
+(define wordsize 4)
+
 
 
 ;what we did till now was just for fixnums integers but scheme has more to it than just integers 
@@ -91,10 +95,10 @@
 (define (immediate? x) (or (integer? x) (char? x) (boolean? x) (null? x)))
 
 
-(define (compile-expr e)
+(define (compile-expr e si)
   (cond
   ((immediate? e) (emit "    movl $~s, %eax" (immediate-rep e)))
-  ((primitive-call? e) (compile-primitive-call e))))
+  ((primitive-call? e) (compile-primitive-call e  si))))
 
 ;comparing values for type checking
 (define (emit-is-eax-equal-to val)
@@ -106,34 +110,48 @@
 ;;then the runtime tells us whether it is t ot f
 
 
-(define (compile-primitive-call form)
+(define (compile-primitive-call form si)
   (case (primitive-op form)
     ((add1)
      ;2 operations below first one stores the arg in the register
      ;then second one just makes the assembly -> addl $~1, %eax 
-     (compile-expr (primitive-op-arg1 form))
+     (compile-expr (primitive-op-arg1 form ) si)
      (emit "    addl $~s, %eax" (immediate-rep 1)))
     ;similar to add1
     ((sub1)
-    (compile-expr (primitive-op-arg1 form))
+    (compile-expr (primitive-op-arg1 form ) si)
     (emit "    subl $~s, %eax" (immediate-rep 1)))
     ;check if integer or not
     ((integer?)
-     (compile-expr (primitive-op-arg1 form))
+     (compile-expr (primitive-op-arg1 form) si )
      (emit "    andl $~s, %eax" fixnum-mask)
      (emit-is-eax-equal-to 0)
      )
     ;cheack if char or not
     ((char?)
-     (compile-expr (primitive-op-arg1 form))
+     (compile-expr (primitive-op-arg1 form ) si )
      (emit "    andl $~s, %eax" char-mask)
      (emit-is-eax-equal-to char-tag)
      )
     ;check if boolean or not 
     ((boolean?)
-     (compile-expr (primitive-op-arg1 form))
+     (compile-expr (primitive-op-arg1 form ) si)
      (emit "    andl $~s, %eax" bool-mask)
      (emit-is-eax-equal-to bool-tag))
+    ;add two numbers
+    ((+)
+     (compile-expr (primitive-op-arg1 form) si)
+     (emit "    movl %eax, ~a(%esp)" si)
+     (compile-expr (primitive-op-arg2 form) si)
+     (emit "    addl ~a(%esp), %eax" si))
+    ;sub two numbers
+    ((-)
+    (compile-expr (prmitive-op-arg1 form) si)
+    (emit "    movl %eax, ~a(%esp) si")
+    (compile-expr (primitive-op-arg2 form) si)
+    (emit "    subl ~a(%esp), %eax" si))
+
+    
     ))
 
 
