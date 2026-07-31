@@ -211,6 +211,18 @@
      (emit"    setne %al")
      (emit"    sall $~a,%eax" bool-shift)
      (emit"    orl $~a,%eax" bool-tag))
+    ;character equality test
+    ((char=?)
+     (compile-expr (primitive-op-arg1 form) si)
+     (emit"    shrl $~a,%eax" char-shift)
+     (emit"    movl %eax, ~a(%esp)" si)
+     (compile-expr (primitive-op-arg2 form) (- si wordsize))
+     (emit"    shrl $~a,%eax" char-shift)
+     (emit"    cmpl %eax, ~a(%esp)" si)
+     (emit"    movl $0, %eax")
+     (emit"    sete %al")
+     (emit"    sall $~a,%eax" bool-shift)
+     (emit"    orl $~a,%eax" bool-tag))
    ))
 
 
